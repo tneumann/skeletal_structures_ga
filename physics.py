@@ -1,7 +1,3 @@
-from IPython.Shell import IPShellEmbed
-import IPython
-import IPython.Shell
-import pdb
 import numpy as N
 import time
 
@@ -181,73 +177,32 @@ def visual_test(jpos, jfreedom, loads, elements, E, r, p, max_stress=3e+8):
     print "strain: ", strains.min(), strains.max()
 
     v.scene.reset_zoom()
-    #ipshell = IPython.Shell.IPShellWX( [ '-wthread' ], user_ns=locals() )
-    #ipshell.mainloop()
     GUI().start_event_loop()
 
 
 if __name__ == '__main__':
+    jpos = N.array([[-.1, 0.0],     [.1,0.0],   [0.0, -1.0]])
+    jfreedom = N.array( [[False, False], [False, False], [True, True]] )
+    elements = N.array([[1,2], [0,2]])
+    r = N.array([0.001, 0.001])
+    loads = N.array([[0,0], [0, 0], [0,-2000]], N.float)
+    element_E = N.zeros( len(elements), N.double)
+    element_E[:] =2.1e+11
+    visual_test(jpos, jfreedom, loads, elements, element_E, r, 7700.0)
+
     #   j6--j7--j8
     #  / |\/| \/| \
     # /  |/\| /\|  \
     #j1--j2-j3--j4--j5
-    #jpos = N.array( [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [3.0, 0.0], [4.0, 0.0], [0.0, 1.0], [2.0, 1.0], [4.0, 1.0]] )
-    #jfreedom = N.array( [[False, False], [True, True], [True, True], [True, True], [True, False], [True, True], [True, True], [True, True]] )
-    #elements = N.array( [[0, 5], [0, 1], [1, 5], [1, 2], [1, 6], [2, 5], [2, 3], [2, 6], [2, 7], [3, 6], [3, 7], [3, 4], [4, 7], [5, 6], [6, 7]] )
-    #loads = N.array( [[0.0, 0.0], [0.0, -5.0], [0.0, -5.0], [0.0, -5.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]] )
-    #element_E = N.zeros( len(elements), N.double)
-    #element_E[:] = 20000
-    #element_A = N.zeros( len(elements), N.double)
-    #element_A[:] = 0.01
-    ##element_eas[:] = 2.1e+11 * 0.001 # 210 kN/mm^2 == 2.1e+11 N/m^2, A = 1mm^2 = 0.001m^2
-    #visual_test(jpos, jfreedom, loads, elements, element_E, element_A)
-
-    # another test from the textbook
-    #jpos = N.array(     [[0.0, 0.0],     [1000.0, 0.0],   [2000.0, 0.0],   [3000.0, 0.0],   [4000.0, 0.0]])
-    #jfreedom = N.array( [[False, False], [True, False], [True, False], [True, False], [True, False]] )
-    #elements = N.array([[0,1], [1,2], [2,3], [3,4]])
-    ##loads = N.array([[0,0], [0,1000], [0,1000], [0,1000], [0,1000]], N.float)
-    #loads = N.array([[0,0], [1000,0], [1000,0], [1000,0], [1000,0]], N.float)
-    #element_E = N.zeros( len(elements), N.double)
-    #element_E[:] = 200000
-    #element_A = N.zeros( len(elements), N.double)
-    #element_A[:] = 100
-    #visual_test(jpos, jfreedom, loads, elements, element_E, element_A)
-
-    #jpos = N.array([[0.0, 0.0],     [2.0, -1.0],   [0.0, -1.0]])
-    jpos = N.array([[-.1, 0.0],     [.1,0.0],   [0.0, -1.0]])
-    jfreedom = N.array( [[False, False], [False, False], [True, True]] )
-    elements = N.array([[1,2], [0,2]])
-    #loads = N.array([[0,0], [0,1000], [0,1000], [0,1000], [0,1000]], N.float)
-    p = 7700. # unit: kg/m^3
-    r = N.array([0.001, 0.001])
-    edge = jpos[elements[:,1]] - jpos[elements[:,0]]
-    ls = N.sqrt(edge[:,0]**2 + edge[:,1]**2)
-    #weights = p * N.pi * r**2 * ls * g # unit: Newton
-    loads = N.array([[0,0], [0, 0], [0,-2000]], N.float)
-    #loads = N.zeros_like(jpos)
-    #for i,weight in enumerate(weights):
-    #    loads[elements[i]] += (0, -weight/2.)
-    #loads[~jfreedom] = 0
+    jpos = N.array( [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [3.0, 0.0], [4.0, 0.0], [0.0, 1.0], [2.0, 1.0], [4.0, 1.0]] )
+    jfreedom = N.array( [[False, False], [True, True], [True, True], [True, True], [True, False], [True, True], [True, True], [True, True]] )
+    elements = N.array( [[0, 5], [0, 1], [1, 5], [1, 2], [1, 6], [2, 5], [2, 3], [2, 6], [2, 7], [3, 6], [3, 7], [3, 4], [4, 7], [5, 6], [6, 7]] )
+    loads = N.array( [[0.0, 0.0], [0.0, -5.0], [0.0, -5.0], [0.0, -5.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]] ) * 5000
     element_E = N.zeros( len(elements), N.double)
-    #element_E = N.array([2.1e+11, 0.1])
     element_E[:] =2.1e+11
-    #element_A = N.zeros( len(elements), N.double)
-    #element_A[:] = N.pi * r**2
-    visual_test(jpos, jfreedom, loads, elements, element_E, r, 7700.0)
-
-    #jpos = N.array([[0.0, 0.0],     [0.0, -2.0]])
-    #jfreedom = N.array( [[False, False], [True, True]] )
-    #elements = N.array([[0,1]])
-    ##loads = N.array([[0,0], [0,1000], [0,1000], [0,1000], [0,1000]], N.float)
-    #p = 7700. # unit: kg/m^3
-    #r = N.array([0.0005])
-    #loads = N.array([[0,0], [0,-250]], N.float)
-    #element_E = N.zeros( len(elements), N.double)
-    #element_E[:] = 2.1e+11
-    ##element_A = N.zeros( len(elements), N.double)
-    ##element_A[:] = N.pi * r**2
-    #visual_test(jpos, jfreedom, loads, elements, element_E, r, 7700.0)
+    r = N.ones(len(elements), N.float) * 0.01
+    #element_eas[:] = 2.1e+11 * 0.001 # 210 kN/mm^2 == 2.1e+11 N/m^2, A = 1mm^2 = 0.001m^2
+    visual_test(jpos, jfreedom, loads, elements, element_E, r, 3000.0)
 
 
 
