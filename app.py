@@ -6,6 +6,9 @@
 # the terms of the GNU Public License (GPL) version 2.
 
 import enthought.pyface.api as pyface
+# out of some strange reason we need to load chaco very early (before vtk)
+from enthought.chaco.api import Plot, ArrayPlotData
+
 import sys
 
 import data

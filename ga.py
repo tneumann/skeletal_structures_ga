@@ -125,6 +125,8 @@ class GeneticAlgorithm(HasTraits):
     # step event executed whenever a fresh generation has been evaluated
     on_step = Event()
 
+    on_init = Event()
+
     populations = List(Population)
     population_size = Int(20)
     current_population = Property(Instance(Population), depends_on='populations')
@@ -133,6 +135,11 @@ class GeneticAlgorithm(HasTraits):
     current_best_raw_fitness = Property(Int, depends_on='populations')
     current_worst_raw_fitness = Property(Int, depends_on='populations')
     current_mean_raw_fitness = Property(Int, depends_on='populations')
+
+    #collect_history_stats = Bool(True)
+    #best_raw_fitness_history = ListFloat
+    #average_raw_fitness_history = ListFloat
+    #worst_raw_fitness_history = ListFloat
 
     # if elitism is turned on, then children will compete with their parents, and good individuals will
     # not die but stay for as long as they are competed by better individuals
@@ -148,13 +155,22 @@ class GeneticAlgorithm(HasTraits):
             return None
 
     def _get_current_best_raw_fitness(self):
-        return self.current_population.best.raw_fitness
+        if self.current_population:
+            return self.current_population.best.raw_fitness
+        else:
+            return 0
 
     def _get_current_worst_raw_fitness(self):
-        return self.current_population.worst.raw_fitness
+        if self.current_population:
+            return self.current_population.worst.raw_fitness
+        else:
+            return 0
 
     def _get_current_mean_raw_fitness(self):
-        return self.current_population.mean_fitness
+        if self.current_population:
+            return self.current_population.mean_fitness
+        else:
+            return 0
 
     def init_evolution(self):
         ''' initialize empty population from initializer function and evaluate first population '''
@@ -168,6 +184,15 @@ class GeneticAlgorithm(HasTraits):
         self.survival(self.world, cur_pop.individuals)
         self.num_steps = 0
         self.inited = True
+        #self.best_raw_fitness_history = []
+        #self.average_raw_fitness_history = []
+        #self.worst_raw_fitness_history = []
+        self.on_init = True
+
+    def reset_evolution(self):
+        self.inited = False
+        self.num_steps = 0
+        self.populations = []
 
     def evolution_step(self):
         ''' complete genetic algorithm cycle including selection and reproduction '''
@@ -217,6 +242,10 @@ class GeneticAlgorithm(HasTraits):
         if self.num_keep_generations != -1 and len(self.populations) > self.num_keep_generations:
             self.populations = self.populations[-self.num_keep_generations:]
         self.num_steps += 1
+        #if self.collect_history_stats:
+        #    self.best_raw_fitness_history.append(float(self.current_population.best.raw_fitness))
+        #    self.average_raw_fitness_history.append(float(self.current_population.mean_fitness))
+        #    self.worst_raw_fitness_history.append(float(self.current_population.worst.raw_fitness))
         self.on_step = new_pop
 
     def _calc_base_fitness(self, population):

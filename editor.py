@@ -10,6 +10,7 @@ from enthought.tvtk.api import tvtk
 import enthought.pyface.api as pyface
 from enthought.tvtk.pyface.api import Scene
 import enthought.traits.ui.api as tui
+from enthought.chaco.api import Plot, ArrayPlotData
 import numpy as N
 import wx
 import pickle
@@ -300,19 +301,23 @@ class ConstructionEditor(pyface.SplitApplicationWindow):
 
     def _redraw_caption(self):
         if self.construction:
-            # calculate fitness for shown construction
-            #self.construction_fitness = fitness_for_construction(self.ga, self.construction)
-            if self.construction.simulation_result.okay:
-                stability = self.construction.simulation_result.stability
-                if stability < 0:
-                    stability_txt = 'STATICALLY UNSTABLE (%.0f%%)' % (stability * 100)
-                    self._text_actor.text_property.color = (1.0, 0.0, 0.0)
+            if len(self.construction.joints) > 0 and len(self.construction.elements) > 0:
+                # calculate fitness for shown construction
+                #self.construction_fitness = fitness_for_construction(self.ga, self.construction)
+                if self.construction.simulation_result.okay:
+                    stability = self.construction.simulation_result.stability
+                    if stability < 0:
+                        stability_txt = 'STATICALLY UNSTABLE (%.0f%%)' % (stability * 100)
+                        self._text_actor.text_property.color = (1.0, 0.0, 0.0)
+                    else:
+                        self._text_actor.text_property.color = (1.0, 1.0, 1.0)
+                        stability_txt = 'Stability %.0f%%' % (stability * 100)
+                    self._text_actor.input = 'Weight: %.2fkg, %s' % (self.construction.simulation_result.construction_mass, stability_txt)
                 else:
-                    self._text_actor.text_property.color = (1.0, 1.0, 1.0)
-                    stability_txt = 'Stability %.0f%%' % (stability * 100)
-                self._text_actor.input = 'Weight: %.2fkg, %s' % (self.construction.simulation_result.construction_mass, stability_txt)
+                    self._text_actor.input = 'Simulation Error (%s)' % self.construction.simulation_result.status
+                self._text_actor.visibility = True
             else:
-                self._text_actor.input = 'Cannot simulate (%s)' % self.construction.simulation_result.status
+                self._text_actor.visibility = False
 
     def _redraw_joints(self):
         if self.scene and self.construction:
@@ -377,6 +382,83 @@ class ConstructionEditor(pyface.SplitApplicationWindow):
             self.scene.close()
         super(ConstructionEditor, self).close()
 
+    @on_trait_change('show_evolution_progress, ga.on_step')
+    def _update_evolve_gui(self):
+        if self.show_evolution_progress and self.ga.current_population:
+            self.selectable_individuals = [ui.IndividualSelect(individual, i+1) for i,individual in enumerate(self.ga.current_population.individuals)]
+            self.selected_individual = self.selectable_individuals[0]
+
+#############################################################
+# plots
+    plot_num_generations = Enum(-1, 10, 50, 500, 5000)
+
+    fitness_plot = Instance(Plot)
+    fitness_plot_data = Instance(ArrayPlotData)
+    #feasible_plot = Instance(Plot)
+    #feasible_plot_data = Instance(ArrayPlotData)
+    #stability_plot = Instance(Plot)
+    #stability_plot_data = Instance(ArrayPlotData)
+
+    @on_trait_change('_on_init')
+    def _init_plots(self):
+        # fitness
+        self.fitness_plot_data = ArrayPlotData(generation=N.zeros(1), best=N.zeros(1), average=N.zeros(1))
+        self.fitness_plot = Plot(self.fitness_plot_data)
+        self.fitness_plot.legend.visible = True
+        self.fitness_plot.set(padding_top = 5, padding_right = 5, padding_bottom = 20, padding_left = 40)
+        self.fitness_plot.plot(('generation', 'best'), color='green', line_width=2, name='best')
+        self.fitness_plot.plot(('generation', 'average'), color='black', name='avg')
+        ## stability
+        #self.stability_plot_data = ArrayPlotData(generation=N.zeros(1), min=N.zeros(1), max=N.zeros(1), average=N.zeros(1))
+        #self.stability_plot = Plot(self.stability_plot_data, height=100)
+        #self.stability_plot.legend.visible = True
+        #self.stability_plot.set(padding_top = 15, padding_right = 5, padding_bottom = 20, padding_left = 40, title='Stability')
+        #self.stability_plot.plot(('generation', 'min'), color='red', line_width=2, name='min')
+        #self.stability_plot.plot(('generation', 'average'), color='black', name='avg')
+        #self.stability_plot.plot(('generation', 'max'), color='green', line_width=2, name='max')
+        ## feasible
+        #self.feasible_plot_data = ArrayPlotData(generation=N.zeros(1), num=N.zeros(1))
+        #self.feasible_plot = Plot(self.feasible_plot_data)
+        #self.feasible_plot.set(padding_top = 15, padding_right = 5, padding_bottom = 20, padding_left = 40, title = 'Unfeasible Individuals')
+        #self.feasible_plot.plot(('generation', 'num'), color='red', line_width=2)
+
+    @on_trait_change('ga.on_init')
+    def _reset_plots(self):
+        self._fitness_best_history = []
+        self._fitness_avg_history = []
+        #self._stability_max_history = []
+        #self._stability_min_history = []
+        #self._stability_avg_history = []
+        #self._num_feasible_history = []
+
+    @on_trait_change('show_evolution_progress, ga.on_step, ga.on_init')
+    def _update_plots(self):
+        mm = self.plot_num_generations # just an alias so that slicing expressions do not become too big
+        gens = N.r_[:self.ga.num_steps][-mm:]
+        # fitness plot
+        if self.ga.current_population:
+            self._fitness_best_history.append(self.ga.current_population.best.raw_fitness)
+            self._fitness_avg_history.append(N.array([i.raw_fitness for i in self.ga.current_population.individuals if i.feasible and not i.got_penalized]).mean())
+        self.fitness_plot_data.set_data('generation', gens)
+        self.fitness_plot_data.set_data('best', self._fitness_best_history[-mm:])
+        self.fitness_plot_data.set_data('average', self._fitness_avg_history[-mm:])
+        ## stability plot
+        #if self.ga.current_population:
+        #    stabilities = N.array([i.stability for i in self.ga.current_population.individuals], N.float) * 100
+        #    self._stability_min_history.append(stabilities.min())
+        #    self._stability_max_history.append(stabilities.max())
+        #    self._stability_avg_history.append(stabilities.mean())
+        #self.stability_plot_data.set_data('generation', gens)
+        #self.stability_plot_data.set_data('min', self._stability_min_history[-mm:])
+        #self.stability_plot_data.set_data('max', self._stability_max_history[-mm:])
+        #self.stability_plot_data.set_data('average', self._stability_avg_history[-mm:])
+        ## feasible plot
+        #if self.ga.current_population:
+        #    self._num_feasible_history.append(len([i for i in self.ga.current_population.individuals if not i.feasible or i.got_penalized]))
+        #self.feasible_plot_data.set_data('generation', gens)
+        #self.feasible_plot_data.set_data('num', self._num_feasible_history[-mm:])
+
+
 #############################################################
 # ga related
     ga = Instance(GA.GeneticAlgorithm)
@@ -387,39 +469,27 @@ class ConstructionEditor(pyface.SplitApplicationWindow):
     reset_evolve = Button()
     evolving = Bool(False)
 
-    selected_population = Instance(ui.PopulationSelect)
-    selectable_populations = List(ui.PopulationSelect)
-
     selected_individual = Instance(ui.IndividualSelect)
     selectable_individuals = List(ui.IndividualSelect)
 
     show_evolution_progress = Bool(True)
+    ga_step = Event
 
-    def _on_ga_step(self):
-        if self.show_evolution_progress:
-            self._update_evolve_gui()
+    #def _internal_on_ga_step(self):
+    #    self.ga_step = True
 
-    def _selected_population_changed(self):
-        self.selectable_individuals = [ui.IndividualSelect(individual, i+1) for i,individual in enumerate(self.selected_population.population.individuals)]
-        self.selected_individual = self.selectable_individuals[0]
-
-    def _ga_changed(self, old, new):
-        if old != new and new:
-            new.on_trait_event(self._on_ga_step, 'on_step', dispatch='fast_ui')
+    #def _ga_changed(self, old, new):
+    #    if old != new and new:
+    #        new.on_trait_event(self._internal_on_ga_step, 'on_step', dispatch='fast_ui')
 
     def _start_evolve_fired(self):
         if not self.ga.inited:
             self.ga.world.construction = self.construction
             self.construction = self.construction.clone_traits(copy='deep')
             self.ga.init_evolution()
-            self._update_evolve_gui()
+            self.ga_step = True
         self.interaction_mode = 'evolve'
         self.gui.invoke_later(self._evolve_it)
-
-    @on_trait_change('show_evolution_progress')
-    def _update_evolve_gui(self):
-        self.selectable_populations = [ui.PopulationSelect(pop) for pop in self.ga.populations]
-        self.selected_population = self.selectable_populations[-1]
 
     def _fitness_function_changed(self):
         self.ga.fitness_function = self.fitness_function
@@ -443,7 +513,7 @@ class ConstructionEditor(pyface.SplitApplicationWindow):
     def _reset_evolve_fired(self):
         if self.ga.inited and self.ga.world:
             self.construction = self.ga.world.construction
-            self.ga.inited = False
+            self.ga.reset_evolution()
 
 #############################################################
 # model
@@ -455,15 +525,15 @@ class ConstructionEditor(pyface.SplitApplicationWindow):
 
     def _open_construction_fired(self):
         file_dialog = pyface.FileDialog(action='open',
-                wildcard='Constructions (*)|*|')
+                wildcard='Constructions (*.con)|*.con|')
         if file_dialog.open() == pyface.OK:
-            self.construction = pickle.load(open(file_dialog.path))
+            self.construction, self.ga = pickle.load(open(file_dialog.path))
 
     def _save_construction_fired(self):
         file_dialog = pyface.FileDialog(action='save as',
                 wildcard='Constructions (*.con)|*.con|')
         if file_dialog.open() == pyface.OK:
-            pickle.dump(self.construction, open(file_dialog.path, 'w'))
+            pickle.dump((self.construction, self.ga), open(file_dialog.path, 'w'))
 
     def _new_construction_fired(self):
         self.construction = model.Construction(available_element_materials=data.steels, element_deleted_material=data.air)

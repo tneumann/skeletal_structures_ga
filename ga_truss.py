@@ -159,6 +159,7 @@ class ConstructionIndividual(GA.BaseIndividual):
             (time_preparation, time_solution, time_postprocessing) = \
                     physics.analyse_truss(self.joint_positions, jfreedom, world.construction.loads_array, 
                             world.construction.element_index_table, element_E, element_r, element_p)
+        self.stability = 1 - (N.max(N.abs(self.element_stresses) / world.construction.max_element_stress_array))
         # calculate constraints
         self.stability_constraint = N.max( N.abs(self.element_stresses) / world.construction.max_element_stress_array ) - 1
         # calculate displacement constraints
@@ -166,6 +167,7 @@ class ConstructionIndividual(GA.BaseIndividual):
         # combine constraints into feasibility
         self.feasability = max(self.stability_constraint, self.displacement_constraint)
         self.feasible = self.stability_constraint <= 0 and self.displacement_constraint <= 0
+        self.got_penalized = False
 
     def clone(self):
         c = ConstructionIndividual()
@@ -284,6 +286,7 @@ class ConstructionSurvival(HasTraits):
             for individual_index in N.flatnonzero(bad_individual):
                 individual = individuals[individual_index]
                 individual.raw_fitness = individual.raw_fitness + 1e+6
+                individual.got_penalized = True
 
         if self.force_variety_size and len(individuals[0].element_material_gene) > 0:
             all_element_genes = N.maximum(N.array([i.element_material_gene for i in individuals]), -1) # max(..,-1) because deleted elements are all < 0
@@ -300,6 +303,7 @@ class ConstructionSurvival(HasTraits):
             for individual_index in N.flatnonzero(bad_individual):
                 individual = individuals[individual_index]
                 individual.raw_fitness = individual.raw_fitness + 1e+6
+                individual.got_penalized = True
                 #print "bad: ", individual.element_material_gene
 
         if self.force_variety_shape and len(individuals[0].joint_positions_gene) > 0:
@@ -315,6 +319,7 @@ class ConstructionSurvival(HasTraits):
             for individual_index in N.flatnonzero(bad_individual):
                 individual = individuals[individual_index]
                 individual.raw_fitness = individual.raw_fitness + 1e+6
+                individual.got_penalized = True
                 #print "bad: ", individual.element_material_gene
 
 

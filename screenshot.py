@@ -83,13 +83,13 @@ def figure(con, radius_amplify=50, path=None, size_factor=0.5):
     _setup_figure(con, size_factor)
     _drawfig(con, radius_amplify=radius_amplify, path=path, size_factor=size_factor)
             
-def figure_all(app, radius_amplify=50, path='/tmp', format='eps', size_factor=0.5):
-    _setup_figure(app.ga.world.construction, size_factor)
-    for i,individual in enumerate(app.ga.current_population.individuals):
-        con = app.ga.world.construction_from_individual(individual)
+def figure_all(ga, radius_amplify=50, path='/tmp', format='eps', size_factor=0.5):
+    _setup_figure(ga.world.construction, size_factor)
+    for i,individual in enumerate(ga.current_population.individuals):
+        con = ga.world.construction_from_individual(individual)
 
         _drawfig(con, radius_amplify=radius_amplify, path = '%s/%d.%s' % (path, i, format), size_factor=size_factor)
-    _drawfig(app.ga.world.construction, radius_amplify=radius_amplify, path = '%s/start.%s' % (path, format), size_factor=size_factor)
+    _drawfig(ga.world.construction, radius_amplify=radius_amplify, path = '%s/start.%s' % (path, format), size_factor=size_factor)
 
 
 

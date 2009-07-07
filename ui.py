@@ -10,6 +10,7 @@ from enthought.traits.ui.api import *
 from enthought.pyface.api import ImageResource
 from enthought.traits.ui.tabular_adapter import TabularAdapter
 from enthought.traits.ui.menu import OKButton
+from enthought.enable.component_editor import ComponentEditor
 import model
 
 def general_edit_view(available_element_materials):
@@ -86,9 +87,11 @@ def general_edit_view(available_element_materials):
                         Item(name='reset_evolve', label="reset evolution", editor=ButtonEditor(), show_label=False,
                             enabled_when='ga.inited and not interaction_mode == "evolve"'),
                     ),
+                    label='Control',
+                ),
+                Group(
                     Group(
                         Item(name='num_steps', label='Generations', object='object.ga', style='readonly'),
-                        Item(name='num_keep_generations', label='Keep generations', object='object.ga'),
                         Item(name='current_best_raw_fitness', label='best', 
                             object='object.ga', style='readonly'),
                         Item(name='current_mean_raw_fitness', label='mean', 
@@ -96,13 +99,17 @@ def general_edit_view(available_element_materials):
                         Item(name='current_worst_raw_fitness', label='worst', 
                             object='object.ga', style='readonly'),
                     ),
-                    label = 'Status & Control',
+                    Group(
+                        Item('fitness_plot', editor=ComponentEditor(height=150), show_label=False),
+                    ),
+                    Group(
+                        Item(name='plot_num_generations', label='Generations in Chart'),
+                    ),
+                    label='Status',
                 ),
                 Group(
                     Group(
                         Item(name='show_evolution_progress', label='Render Individual'),
-                        Item(name='selected_population', label='Population', editor=EnumEditor(name='selectable_populations'),
-                            enabled_when='show_evolution_progress'),
                         Item(name='selected_individual', label='Individual', editor=EnumEditor(name='selectable_individuals'),
                             enabled_when='show_evolution_progress'),
                     ),
@@ -243,13 +250,6 @@ class IndividualSelect(HasTraits):
 
     def __str__(self):
         return "#%04d (%d, %.2f/%.2f)" % (self.num_in_population, self.individual.age, self.individual.mass, self.individual.raw_fitness)
-
-class PopulationSelect(HasTraits):
-    def __init__(self, population):
-        self.population = population
-
-    def __str__(self):
-        return "#%04d (best: %.2f, mean: %.2f)" % (self.population.number, self.population.best.raw_fitness, self.population.mean_fitness)
 
 def _material_select(available_materials):
     material_select = {}
